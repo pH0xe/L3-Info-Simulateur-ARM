@@ -65,18 +65,18 @@ uint32_t read_register(registers r, uint8_t reg) {
 }
 
 uint32_t read_usr_register(registers r, uint8_t reg) {
-    uint32_t value=value=r->data[reg];
+    uint32_t value=r->data[reg];
     
     return value;
 }
 
 uint32_t read_cpsr(registers r) {
-    uint32_t value=value=r->data[CPSR];
+    uint32_t value=r->data[CPSR];
     return value;
 }
 
 uint32_t read_spsr(registers r) {
-    uint32_t value=value=r->data[SPSR];
+    uint32_t value=r->data[SPSR];
     return value;
 }
 
