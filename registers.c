@@ -23,22 +23,24 @@ Contact: Guillaume.Huard@imag.fr
 #include "registers.h"
 #include "arm_constants.h"
 #include <stdlib.h>
+#include "trace.h"
 
 struct registers_data {
     uint8_t mode;
     uint8_t name;
-    
+    uint32_t *data;
 };
 
 registers registers_create() {
     registers r = malloc(sizeof(registers));
     r->mode=0;
     r->name=0;
+    r->data=calloc(18,sizeof(uint32_t));
     return r;
 }
 
 void registers_destroy(registers r) {
-    //TODO
+    free(r->data);
     free(r);
 }
 
@@ -48,7 +50,7 @@ uint8_t get_mode(registers r) {
 
 int current_mode_has_spsr(registers r) {
     char* res=arm_get_register_name(r->name);
-    return strcmp(res,"SPSR")==1;
+    return strcmp(res,"SPSR")==0;
      
 }
 
@@ -58,51 +60,46 @@ int in_a_privileged_mode(registers r) {
 }
 
 uint32_t read_register(registers r, uint8_t reg) {
-    uint32_t value=;
+    uint32_t value=r->data[reg];
     return value;
 }
 
 uint32_t read_usr_register(registers r, uint8_t reg) {
-    uint32_t value=0;
-    int res = in_a_privileged_mode(r);
-    if(!res){
-        value=0;
-    }
+    uint32_t value=value=r->data[reg];
     
     return value;
 }
 
 uint32_t read_cpsr(registers r) {
-    char* res=arm_get_register_name(r->name);
-    uint32_t value=0;
-    if(strcmp(res,"CPSR")==1){
-        value=0;
-    }
+    uint32_t value=value=r->data[CPSR];
     return value;
 }
 
 uint32_t read_spsr(registers r) {
-    char* res=arm_get_register_name(r->name);
-    uint32_t value=0;
-    if(strcmp(res,"SPSR")==1){
-        value=r->data;
-    }
+    uint32_t value=value=r->data[SPSR];
     return value;
 }
 
 void write_register(registers r, uint8_t reg, uint32_t value) {
+    uint32_t mask = ~(0xFFFFFFFF);
+    r->data[reg]&= mask;
+    r->data[reg]|= value;
 }
 
 void write_usr_register(registers r, uint8_t reg, uint32_t value) {
-    uint32_t value=0;
-    int res = in_a_privileged_mode(r);
-    if(!res){
-        
-    }
+    uint32_t mask = ~(0xFFFFFFFF);
+    r->data[reg]&= mask;
+    r->data[reg]|= value;
 }
 
 void write_cpsr(registers r, uint32_t value) {
+    uint32_t mask = ~(0xFFFFFFFF);
+    r->data[CPSR]&= mask;
+    r->data[CPSR]|= value;
 }
 
 void write_spsr(registers r, uint32_t value) {
+    uint32_t mask = ~(0xFFFFFFFF);
+    r->data[SPSR]&= mask;
+    r->data[SPSR]|= value;
 }
