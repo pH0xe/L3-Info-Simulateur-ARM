@@ -48,18 +48,16 @@ void memory_destroy(memory mem) {
 }
 
 int memory_read_byte(memory mem, uint32_t address, uint8_t *value) {
-    if (address < mem->size) {
+    if (address >= mem->size * 8) {
         return -1;
     }
 
-    uint32_t val = mem->data[address / 4];
+    uint32_t val = mem->data[address / 8];
 
     if (mem->is_big_endian) {
-        uint32_t val1 = reverse_4(val);
-        uint32_t val2 = reverse_4(val >> 16);
-        val = set_bits(val, 30, 16, val1);
-        val = set_bits(val, 14, 0, val2);
+        val = reverse_4(val);
     }
+    // printf("val: %x", val);
 
     uint8_t byte = get_bits(val, (address % 4) * 8 + 8, (address) % 4 * 8);
     *value = byte;
@@ -67,17 +65,17 @@ int memory_read_byte(memory mem, uint32_t address, uint8_t *value) {
 }
 
 int memory_read_half(memory mem, uint32_t address, uint16_t *value) {
-    if (address % 2 != 0 && address < mem->size) {
+    if (address % 2 != 0 || address >= mem->size * 8) {
         return -1;
     }
 
-    uint32_t val = mem->data[address / 4];
+    uint32_t val = mem->data[address / 8];
+
     if (mem->is_big_endian) {
-        uint32_t val1 = reverse_4(val);
-        uint32_t val2 = reverse_4(val >> 16);
-        val = set_bits(val, 30, 16, val1);
-        val = set_bits(val, 14, 0, val2);
+        val = reverse_4(val);
+        // val = val >> 16;
     }
+
 
     uint16_t half = get_bits(val, (address % 4) * 8 + 16, (address % 4) * 8);
     if (mem->is_big_endian) {
@@ -88,16 +86,13 @@ int memory_read_half(memory mem, uint32_t address, uint16_t *value) {
 }
 
 int memory_read_word(memory mem, uint32_t address, uint32_t *value) {
-    if (address % 4 != 0 && address < mem->size) {
+    if (address % 4 != 0 || address >= mem->size * 8) {
         return -1;
     }
 
-    uint32_t val = mem->data[address / 4];
+    uint32_t val = mem->data[address / 8];
     if (mem->is_big_endian) {
-        uint32_t val1 = reverse_4(val);
-        uint32_t val2 = reverse_4(val >> 16);
-        val = set_bits(val, 30, 16, val1);
-        val = set_bits(val, 14, 0, val2);
+        val = reverse_4(val);
     }
 
     uint32_t word = get_bits(val, (address % 4) + 30, 0);
@@ -109,7 +104,11 @@ int memory_read_word(memory mem, uint32_t address, uint32_t *value) {
 }
 
 int memory_write_byte(memory mem, uint32_t address, uint8_t value) {
-    uint32_t val = mem->data[address / 4];
+    if (address >= mem->size * 8) {
+        return -1;
+    }
+
+    uint32_t val = mem->data[address / 8];
 
     if (mem->is_big_endian) {
         val = reverse_4(val);
@@ -119,17 +118,17 @@ int memory_write_byte(memory mem, uint32_t address, uint8_t value) {
     if (mem->is_big_endian) {
         val = reverse_4(val);
     }
-    mem->data[address / 4] = val;
+    mem->data[address / 8] = val;
 
     return 0;
 }
 
 int memory_write_half(memory mem, uint32_t address, uint16_t value) {
-    if (address % 2 != 0) {
+    if (address % 2 != 0 || address >= mem->size * 8) {
         return -1;
     }
 
-    uint32_t val = mem->data[address / 4];
+    uint32_t val = mem->data[address / 8];
     if (mem->is_big_endian) {
         val = reverse_4(val);
         value = reverse_2(value);
@@ -140,23 +139,37 @@ int memory_write_half(memory mem, uint32_t address, uint16_t value) {
         val = reverse_4(val);
     }
 
-    mem->data[address / 4] = val;
+    mem->data[address / 8] = val;
 
     return 0;
 }
 
 int memory_write_word(memory mem, uint32_t address, uint32_t value) {
-    if (address % 4 != 0) {
+    if (address % 4 != 0 || address >= mem->size * 8) {
         return -1;
     }
 
-    uint32_t val = mem->data[address / 4];
-    if (mem->is_big_endian) {
-        val = reverse_4(val);
-    }
-    val = set_bits(val, (address % 4) + 30 , (address % 4)*8, value);
+    printf("\nvalue : %x \n", value);
+    uint32_t val = value;
+    // printf("\nvalue : %x \n", value);
 
-    mem->data[address / 4] = val;
-
+    // printf("val : %x \n", val);
+    mem->data[address / 8] = val;
+    printf("mem : %x \n", mem->data[address / 8]);
     return 0;
 }
+
+/*
+data = [
+[0 - 8]
+[9 - 16]
+[17 - 24]
+[25 - 32]
+[33 - 40]
+[41 - 48] //
+[49 - 56]
+[57 - 64]
+[65 - 72]
+[73- 80]
+        ]
+*/
