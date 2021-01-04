@@ -24,6 +24,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include <stdlib.h>
 #include "trace.h"
+#include <string.h>
 
 struct registers_data {
     uint8_t mode;
