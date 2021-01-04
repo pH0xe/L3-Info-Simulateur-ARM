@@ -72,4 +72,5 @@ Examples/insertion_sort
 arm_simulator
 memory_test
 send_irq
-
+.vscode/
+autom4te.cache/
