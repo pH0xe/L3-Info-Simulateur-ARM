@@ -28,13 +28,14 @@ Contact: Guillaume.Huard@imag.fr
 struct memory_data {
     size_t size;
     int is_big_endian;
-    uint64_t data;
+    uint32_t* data;
 };
 
 memory memory_create(size_t size, int is_big_endian) {
     memory mem = malloc(sizeof(memory));
     mem->size = size;
     mem->is_big_endian = is_big_endian;
+    mem->data = malloc(sizeof(uint32_t) * memory_get_size(mem));
     return mem;
 }
 
@@ -47,41 +48,36 @@ void memory_destroy(memory mem) {
 }
 
 int memory_read_byte(memory mem, uint32_t address, uint8_t *value) {
-    uint64_t val = mem->data;
-    if (mem->is_big_endian && address < mem->size) {
-        if (mem->size == 4) {
-            val = reverse_4(val);
-        } else {
-            uint32_t val1 = reverse_4(val);
-            uint32_t val2 = reverse_4(val >> 16);
-            val = set_bits(val, 30, 16, val1);
-            val = set_bits(val, 14, 0, val2);
-        }
+    if (address >= mem->size * 8) {
+        return -1;
     }
 
-    uint8_t byte = get_bits(val, address*8 + 8, address*8);
+    uint32_t val = mem->data[address / 8];
+
+    if (mem->is_big_endian) {
+        val = reverse_4(val);
+    }
+    // printf("val: %x", val);
+
+    uint8_t byte = get_bits(val, (address % 4) * 8 + 8, (address) % 4 * 8);
     *value = byte;
     return 0;
 }
 
 int memory_read_half(memory mem, uint32_t address, uint16_t *value) {
-    if (address % 2 != 0 && address < mem->size) {
+    if (address % 2 != 0 || address >= mem->size * 8) {
         return -1;
     }
 
-    uint32_t val = mem->data;
+    uint32_t val = mem->data[address / 8];
+
     if (mem->is_big_endian) {
-        if (mem->size == 4) {
-            val = reverse_4(val);
-        } else {
-            uint32_t val1 = reverse_4(val);
-            uint32_t val2 = reverse_4(val >> 16);
-            val = set_bits(val, 30, 16, val1);
-            val = set_bits(val, 14, 0, val2);
-        }
+        val = reverse_4(val);
+        // val = val >> 16;
     }
 
-    uint16_t half = get_bits(val, address*8 + 16, address*8);
+
+    uint16_t half = get_bits(val, (address % 4) * 8 + 16, (address % 4) * 8);
     if (mem->is_big_endian) {
         half = reverse_2(half);
     }
@@ -90,23 +86,16 @@ int memory_read_half(memory mem, uint32_t address, uint16_t *value) {
 }
 
 int memory_read_word(memory mem, uint32_t address, uint32_t *value) {
-    if (address % 4 != 0 && address < mem->size) {
+    if (address % 4 != 0 || address >= mem->size * 8) {
         return -1;
     }
 
-    uint32_t val = mem->data;
+    uint32_t val = mem->data[address / 8];
     if (mem->is_big_endian) {
-        if (mem->size == 4) {
-            val = reverse_4(val);
-        } else {
-            uint32_t val1 = reverse_4(val);
-            uint32_t val2 = reverse_4(val >> 16);
-            val = set_bits(val, 30, 16, val1);
-            val = set_bits(val, 14, 0, val2);
-        }
+        val = reverse_4(val);
     }
 
-    uint32_t word = get_bits(val, address + 30, 0);
+    uint32_t word = get_bits(val, (address % 4) + 30, 0);
     if (mem->is_big_endian) {
         word = reverse_4(word);
     }
@@ -115,54 +104,70 @@ int memory_read_word(memory mem, uint32_t address, uint32_t *value) {
 }
 
 int memory_write_byte(memory mem, uint32_t address, uint8_t value) {
-    uint32_t val = mem->data;
+    if (address >= mem->size * 8) {
+        return -1;
+    }
+
+    uint32_t val = mem->data[address / 8];
 
     if (mem->is_big_endian) {
         val = reverse_4(val);
     }
-    val = set_bits(val, address * 8 + 8, address * 8, value);
+    val = set_bits(val, (address % 4) * 8 + 8, (address % 4) * 8, value);
 
     if (mem->is_big_endian) {
         val = reverse_4(val);
     }
-    mem->data = val;
+    mem->data[address / 8] = val;
 
     return 0;
 }
 
 int memory_write_half(memory mem, uint32_t address, uint16_t value) {
-    if (address % 2 != 0) {
+    if (address % 2 != 0 || address >= mem->size * 8) {
         return -1;
     }
 
-    uint32_t val = mem->data;
+    uint32_t val = mem->data[address / 8];
     if (mem->is_big_endian) {
         val = reverse_4(val);
         value = reverse_2(value);
     }
-    val = set_bits(val, address*8 + 15, address*8, value);
+    val = set_bits(val, (address % 4)*8 + 15, (address % 4)*8, value);
 
     if (mem->is_big_endian) {
         val = reverse_4(val);
     }
 
-    mem->data = val;
+    mem->data[address / 8] = val;
 
     return 0;
 }
 
 int memory_write_word(memory mem, uint32_t address, uint32_t value) {
-    if (address % 4 != 0) {
+    if (address % 4 != 0 || address >= mem->size * 8) {
         return -1;
     }
 
-    uint32_t val = mem->data;
-    if (mem->is_big_endian) {
-        val = reverse_4(val);
-    }
-    val = set_bits(val, address + 30 , address*8, value);
+    uint32_t val = value;
+    // printf("\nvalue : %x \n", value);
 
-    mem->data = val;
-
+    // printf("val : %x \n", val);
+    mem->data[address / 8] = val;
     return 0;
 }
+
+/*
+data = [
+[0 - 8]
+[9 - 16]
+[17 - 24]
+[25 - 32]
+[33 - 40]
+[41 - 48] //
+[49 - 56]
+[57 - 64]
+[65 - 72]
+[73- 80]
+        ]
+*/
