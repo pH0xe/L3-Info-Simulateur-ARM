@@ -149,13 +149,11 @@ int memory_write_word(memory mem, uint32_t address, uint32_t value) {
         return -1;
     }
 
-    printf("\nvalue : %x \n", value);
     uint32_t val = value;
     // printf("\nvalue : %x \n", value);
 
     // printf("val : %x \n", val);
     mem->data[address / 8] = val;
-    printf("mem : %x \n", mem->data[address / 8]);
     return 0;
 }
 
