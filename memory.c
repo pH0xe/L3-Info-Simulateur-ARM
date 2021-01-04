@@ -28,7 +28,7 @@ Contact: Guillaume.Huard@imag.fr
 struct memory_data {
     size_t size;
     int is_big_endian;
-    uint64_t data;
+    uint32_t data;
 };
 
 memory memory_create(size_t size, int is_big_endian) {
