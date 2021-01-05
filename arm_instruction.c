@@ -39,7 +39,7 @@ static int arm_execute_instruction(arm_core p) {
     champ = (uint8_t)((val & 0x0E000000) >> 25);
     switch (champ){
         case 0:         //Data processing
-            if ((((val & 0x18) >> 3) == 2) & ((val & 1) == 0)){
+            if (((get_bits(val,24,23) == 2) && (get_bit(val,20) == 0)) && (get_bit(val,4) == 0 || (get_bit(val,7) == 0 && get_bit(val,4) == 1))){
                 return arm_miscellaneous(p, val);
             }
             else {
