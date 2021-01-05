@@ -117,7 +117,5 @@ int main() {
     printf("- half write with a different endianess than me, ");
     memory_write_half(m[1-is_big_endian()], 0, half_value);
     print_test(compare_with_sim(&half_value, m[1-is_big_endian()], 2, 1));
-
-    testPerso();
     return 0;
 }
