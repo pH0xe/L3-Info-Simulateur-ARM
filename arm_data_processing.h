@@ -27,6 +27,7 @@ Contact: Guillaume.Huard@imag.fr
 
 int arm_data_processing_shift(arm_core p, uint32_t ins);
 int arm_data_processing_immediate_msr(arm_core p, uint32_t ins);
+void ZNCV_update(arm_core p, int* oVerflow, int* Carry, uint32_t value, int oV, int Ca);
 
 uint32_t data_processing_operand(arm_core p, uint32_t ins, uint32_t (*operateur)(uint32_t, uint32_t), int* oVerflow, int* Carry);
 uint32_t logical_and(uint32_t val_rn, uint32_t shifter_operand);
