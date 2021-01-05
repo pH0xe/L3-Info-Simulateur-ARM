@@ -37,7 +37,6 @@ static int arm_execute_instruction(arm_core p) {
         return -1;
     } 
     champ = (uint8_t)((val & 0x0E000000) >> 25);
-    //printf("Val, Champ: %x, %x\n",val, champ);
     switch (champ){
         case 0:         //Data processing
             if ((((val & 0x18) >> 3) == 2) & ((val & 1) == 0)){
@@ -75,31 +74,7 @@ static int arm_execute_instruction(arm_core p) {
 int arm_step(arm_core p) {
     int result;
     result = arm_execute_instruction(p);
-    printf("Result: %d\n",result);
     if (result)
         arm_exception(p, result);
     return result;
 }
-/*
- mov r0, #5
- xxxx 001 1101 0 0000 0000 0000 0000 0110
- 0xX3A00005
-struct arm_core_data {
-    uint32_t cycle_count;
-    registers reg;
-    memory mem;
-};
-
-
-int arm_fetch(arm_core p, uint32_t *value) {
-    int result;
-    uint32_t address;
-
-    p->cycle_count++;
-    address = arm_read_register(p, 15) - 4;
-    result = memory_read_word(p->mem, address, value);
-    trace_memory(p->cycle_count, READ, 4, OPCODE_FETCH, address, *value);
-    arm_write_register(p, 15, address + 4);
-    return result;
-}
-*/
