@@ -66,6 +66,8 @@ int compare_with_sim(void *a, memory m, size_t size, int reverse) {
     return 1;
 }
 
+
+
 int main() {
     char *endianess[] = { "little", "big" };
     memory m[2];
