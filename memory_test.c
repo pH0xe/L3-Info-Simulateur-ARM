@@ -51,7 +51,6 @@ int compare(void *a, void *b, size_t size, int reverse) {
 int compare_with_sim(void *a, memory m, size_t size, int reverse) {
     int i, j, j_step;
     uint8_t value;
-    printf("Eux : %x\n", *((uint32_t *) a));
     if (reverse) {
         j = size-1;
         j_step = -1;
@@ -61,7 +60,6 @@ int compare_with_sim(void *a, memory m, size_t size, int reverse) {
     }
     for (i=0; i<size; i++, j+=j_step) {
         memory_read_byte(m, j, &value);
-        printf("Nous, Eux, j, reverse, size : %x, %x, %d, %d, %ld\n", value, *((uint8_t *) a+i), j, reverse, size);
         if (*((uint8_t *) a + i) != value)
             return 0;
     }
