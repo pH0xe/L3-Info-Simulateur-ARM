@@ -46,6 +46,31 @@ uint32_t mov(uint32_t val_rn, uint32_t shifter_operand){ return shifter_operand;
 
 uint32_t bic(uint32_t val_rn, uint32_t shifter_operand){ return val_rn & ~shifter_operand;}
 
+int ZNCV_update(arm_core p, int* oVerflow, int* Carry, uint32_t value, bool V, bool C){
+	uint32_t cpsr_value = arm_read_cpsr(p);
+	if (value == 0){
+		cpsr_value = set_bit(cpsr_value,Z);
+	}
+	else cpsr_value = clr_bit(cpsr_value,Z);
+	if (get_bit(value,31)){
+		cpsr_value = set_bit(cpsr_value,N);
+	}
+	else cpsr_value = clr_bit(cpsr_value,N);
+	if (Carry && C){
+		cpsr_value = set_bit(cpsr_value,C);
+	}
+	else if(C){
+		cpsr_value = clr_bit(cpsr_value,C);
+	}
+	if(oVerflow && V){
+		cpsr_value = set_bit(cpsr_value,V);
+	}
+	else if(V){
+		cpsr_value = clr_bit(cpsr_value,V);
+	}
+	arm_write_cpsr(p,cpsr_value);
+}
+
 uint32_t data_processing_operand(arm_core p, uint32_t ins, uint32_t (*operateur)(uint32_t, uint32_t), int* oVerflow, int* Carry){
 	uint32_t value, shifter_operand;
 	uint8_t rn, rm, rs, shift_value, champ;
@@ -133,17 +158,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, 0, value, 0, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -158,17 +173,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, 0, value, 0, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -183,24 +188,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if(oVerflow){
-						cpsr_value = set_bit(cpsr_value,V);
-					}
-					else cpsr_value = clr_bit(cpsr_value,V);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 1, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -215,24 +203,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if(oVerflow){
-						cpsr_value = set_bit(cpsr_value,V);
-					}
-					else cpsr_value = clr_bit(cpsr_value,V);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 1, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -247,24 +218,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if(oVerflow){
-						cpsr_value = set_bit(cpsr_value,V);
-					}
-					else cpsr_value = clr_bit(cpsr_value,V);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 1, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -280,24 +234,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if(oVerflow){
-						cpsr_value = set_bit(cpsr_value,V);
-					}
-					else cpsr_value = clr_bit(cpsr_value,V);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 1, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -313,24 +250,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if(oVerflow){
-						cpsr_value = set_bit(cpsr_value,V);
-					}
-					else cpsr_value = clr_bit(cpsr_value,V);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 1, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -346,24 +266,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if(oVerflow){
-						cpsr_value = set_bit(cpsr_value,V);
-					}
-					else cpsr_value = clr_bit(cpsr_value,V);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 1, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -375,62 +278,23 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			break;
 		case 8:		//TST
 			value = data_processing_operand(p, ins, logical_and, &oVerflow, &Carry);
-			cpsr_value = arm_read_cpsr(p);
-			if (value == 0){
-				cpsr_value = set_bit(cpsr_value,Z);
-			}
-			else cpsr_value = clr_bit(cpsr_value,Z);
-			if (get_bit(value,31)){
-				cpsr_value = set_bit(cpsr_value,N);
-			}
-			else cpsr_value = clr_bit(cpsr_value,N);
-			cpsr_value = clr_bit(cpsr_value,C);
-			arm_write_cpsr(p,cpsr_value);
+			ZNCV_update(p, oVerflow, Carry, value, 0, 1);
 			return 0;
 			break;
 		case 9:		//TEQ
 			value = data_processing_operand(p, ins, logical_eor, &oVerflow, &Carry);
-			cpsr_value = arm_read_cpsr(p);
-			if (value == 0){
-				cpsr_value = set_bit(cpsr_value,Z);
-			}
-			else cpsr_value = clr_bit(cpsr_value,Z);
-			if (get_bit(value,31)){
-				cpsr_value = set_bit(cpsr_value,N);
-			}
-			else cpsr_value = clr_bit(cpsr_value,N);
-			cpsr_value = clr_bit(cpsr_value,C);
-			arm_write_cpsr(p,cpsr_value);
+			ZNCV_update(p, oVerflow, Carry, value, 0, 1);
 			return 0;
 			break;
 		case 10:	//CMP
 			value = data_processing_operand(p, ins, sub, &oVerflow, &Carry);
-			cpsr_value = arm_read_cpsr(p);
-			if (value == 0){
-				cpsr_value = set_bit(cpsr_value,Z);
-			}
-			else cpsr_value = clr_bit(cpsr_value,Z);
-			if (get_bit(value,31)){
-				cpsr_value = set_bit(cpsr_value,N);
-			}
-			else cpsr_value = clr_bit(cpsr_value,N);
-			cpsr_value = clr_bit(cpsr_value,C);
-			arm_write_cpsr(p,cpsr_value);
+			Carry == 1 ? 0 : 1;
+			ZNCV_update(p, oVerflow, Carry, value, 1, 1);
 			return 0;
 			break;
 		case 11:	//CMN
 			value = data_processing_operand(p, ins, add, &oVerflow, &Carry);
-			cpsr_value = arm_read_cpsr(p);
-			if (value == 0){
-				cpsr_value = set_bit(cpsr_value,Z);
-			}
-			else cpsr_value = clr_bit(cpsr_value,Z);
-			if (get_bit(value,31)){
-				cpsr_value = set_bit(cpsr_value,N);
-			}
-			else cpsr_value = clr_bit(cpsr_value,N);
-			cpsr_value = clr_bit(cpsr_value,C);
-			arm_write_cpsr(p,cpsr_value);
+			ZNCV_update(p, oVerflow, Carry, value, 1, 1);
 			return 0;
 			break;
 		case 12:	//ORR
@@ -438,20 +302,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 0, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -466,20 +317,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 0, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -494,20 +332,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 0, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -522,20 +347,7 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			arm_write_register(p, rd, ~value);
 			if(s){
 				if(rd != 15){
-					cpsr_value = arm_read_cpsr(p);
-					if (value == 0){
-						cpsr_value = set_bit(cpsr_value,Z);
-					}
-					else cpsr_value = clr_bit(cpsr_value,Z);
-					if (get_bit(value,31)){
-						cpsr_value = set_bit(cpsr_value,N);
-					}
-					else cpsr_value = clr_bit(cpsr_value,N);
-					if (Carry){
-						cpsr_value = set_bit(cpsr_value,C);
-					}
-					else cpsr_value = clr_bit(cpsr_value,C);
-					arm_write_cpsr(p,cpsr_value);
+					ZNCV_update(p, oVerflow, Carry, value, 0, 1);
 				}
 				else{
 					if (arm_current_mode_has_spsr(p)){
@@ -555,6 +367,3 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 int arm_data_processing_immediate_msr(arm_core p, uint32_t ins) {
     return UNDEFINED_INSTRUCTION;
 }
-
-
-
