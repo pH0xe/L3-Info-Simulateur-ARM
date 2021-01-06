@@ -70,7 +70,16 @@ void ZNCV_update(arm_core p, int* oVerflow, int* Carry, uint32_t value, int oV, 
 	}
 	arm_write_cpsr(p,cpsr_value);
 }
-
+uint32_t data_processing_immediate_operand(arm_core p, uint32_t ins,uint32_t (*operateur)(uint32_t, uint32_t), int* oVerflow, int* Carry){
+	uint32_t shifter_operand,immediate;
+	uint8_t rotate,rn;
+	immediate = get_bits(ins,7,0);
+	rotate = get_bits(ins,11,8);
+	rn = get_bits(ins,19,16);
+	shifter_operand = ror(immediate,(rotate*2));
+	shifter_operand = operateur(arm_read_register(p,rn), shifter_operand); 
+	return shifter_operand;
+}
 uint32_t data_processing_operand(arm_core p, uint32_t ins, uint32_t (*operateur)(uint32_t, uint32_t), int* oVerflow, int* Carry){
 	uint32_t value, shifter_operand;
 	uint8_t rn, rm, rs, shift_value, champ;
@@ -364,5 +373,220 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 }
 
 int arm_data_processing_immediate_msr(arm_core p, uint32_t ins) {
+    uint8_t rd = get_bits(ins,15,12);
+	uint32_t value;
+	uint8_t opcode = get_bits(ins,24,21);	//Opcode - bits 21 à 24
+	uint8_t s = get_bit(ins,20);			//Bit shift
+	int oVerflow,Carry;
+
+	switch(opcode){
+		case 0:		//AND
+			value = data_processing_immediate_operand(p, ins, logical_and, &oVerflow, &Carry);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, 0, value, 0, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 1:		//EOR
+			value = data_processing_immediate_operand(p, ins, logical_eor, &oVerflow, &Carry);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, 0, value, 0, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 2:		//SUB
+			value = data_processing_immediate_operand(p, ins, sub, &oVerflow, &Carry);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 3:		//RSB
+			value = data_processing_immediate_operand(p, ins, rsb, &oVerflow, &Carry);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 4:		//ADD
+			value = data_processing_immediate_operand(p, ins, add, &oVerflow, &Carry);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 5:		//ADC
+			value = data_processing_immediate_operand(p, ins, add, &oVerflow, &Carry);
+			value = value + get_bit(arm_read_cpsr(p),C);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 6:		//SBC
+			value = data_processing_immediate_operand(p, ins, sub, &oVerflow, &Carry);
+			value = value - ~get_bit(arm_read_cpsr(p),C);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 7:		//RSC
+			value = data_processing_immediate_operand(p, ins, rsb, &oVerflow, &Carry);
+			value = value - ~get_bit(arm_read_cpsr(p),C);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 8:		//TST
+			value = data_processing_immediate_operand(p, ins, logical_and, &oVerflow, &Carry);
+			ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
+			return 0;
+			break;
+		case 9:		//TEQ
+			value = data_processing_immediate_operand(p, ins, logical_eor, &oVerflow, &Carry);
+			ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
+			return 0;
+			break;
+		case 10:	//CMP
+			value = data_processing_immediate_operand(p, ins, sub, &oVerflow, &Carry);
+			Carry = Carry == 1 ? 0 : 1;
+			ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
+			return 0;
+			break;
+		case 11:	//CMN
+			value = data_processing_immediate_operand(p, ins, add, &oVerflow, &Carry);
+			ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
+			return 0;
+			break;
+		case 12:	//ORR
+			value = data_processing_immediate_operand(p, ins, logical_or, &oVerflow, &Carry);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 13:	//MOV
+			value = data_processing_immediate_operand(p, ins, mov ,&oVerflow, &Carry);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 14:	//BIC
+			value = data_processing_immediate_operand(p, ins, bic, &oVerflow, &Carry);
+			arm_write_register(p, rd, value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		case 15:	//MVN
+			value = data_processing_immediate_operand(p, ins, mov, &oVerflow, &Carry);
+			arm_write_register(p, rd, ~value);
+			if(s){
+				if(rd != 15){
+					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
+				}
+				else{
+					if (arm_current_mode_has_spsr(p)){
+						arm_write_cpsr(p, arm_read_spsr(p));
+					}
+				}
+			}
+			return 0;
+			break;
+		default:	//ERROR
+			return UNDEFINED_INSTRUCTION;
+			break;
+	}
     return UNDEFINED_INSTRUCTION;
 }
