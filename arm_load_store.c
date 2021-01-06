@@ -291,7 +291,7 @@ uint32_t getAddressModeBW(arm_core p, uint32_t ins) {
     }
 }
 
-uint32_t* getAddressModeMulti(arm_core p, uint32_t ins){
+void getAddressModeMulti(arm_core p, uint32_t ins, uint32_t* addresses){
     uint32_t rn = get_bits(ins, 19, 16);
     uint32_t valRn = arm_read_register(p, rn);
 
@@ -304,37 +304,39 @@ uint32_t* getAddressModeMulti(arm_core p, uint32_t ins){
         uint32_t start_address = valRn;
         uint32_t end_address = valRn + count - 4;
         if (condition(p, ins) && get_bit(ins, 21) == 1){
-            arm_write_register(p, rn, valRn+count)
+            arm_write_register(p, rn, valRn+count);
         }
-        return [start_address, end_address];
+
+        addresses[0] = start_address;
+        addresses[1] = end_address;
     } else if (inc && !after) {
         // increment before
         uint32_t start_address = valRn + 4;
         uint32_t end_address = valRn + count;
         if (condition(p, ins) && get_bit(ins, 21) == 1){
-            arm_write_register(p, rn, valRn+count)
+            arm_write_register(p, rn, valRn+count);
         }
-        return [start_address, end_address];
-
+        addresses[0] = start_address;
+        addresses[1] = end_address;
     } else if (!inc && after) {
         //decrement after A5-45
         uint32_t start_address = valRn - count + 4;
         uint32_t end_address = valRn;
         if (condition(p, ins) && get_bit(ins, 21) == 1){
-            arm_write_register(p, rn, valRn - count)
+            arm_write_register(p, rn, valRn - count);
         }
-        return [start_address, end_address];
-
+        addresses[0] = start_address;
+        addresses[1] = end_address;
     } else if (!inc && !after) {
         // decrement before
         uint32_t start_address = valRn - count;
         uint32_t end_address = valRn - 4;
         if (condition(p, ins) && get_bit(ins, 21) == 1){
-            arm_write_register(p, rn, valRn - count)
+            arm_write_register(p, rn, valRn - count);
         }
-        return [start_address, end_address];
+        addresses[0] = start_address;
+        addresses[1] = end_address;
     }
-    return NULL;
 }
 
 int arm_load_store(arm_core p, uint32_t ins) {
@@ -393,8 +395,11 @@ int arm_load_store(arm_core p, uint32_t ins) {
 
 int arm_load_store_multiple(arm_core p, uint32_t ins) {
     int is_load = get_bit(ins, 20) == 1;
-    uint32_t addresses = *getAddressModeMulti(p, ins);
-    if (addresses == NULL) {
+    uint32_t addresses[2];
+    addresses[0] = -1;
+    addresses[1] = -1;
+    getAddressModeMulti(p, ins, addresses);
+    if (addresses[0] == -1 || addresses[1] == -1) {
         return -1;
     }
 
@@ -408,7 +413,7 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
                     if (get_bit(ins, 0) == 1) {
                         uint32_t value;
                         arm_read_word(p, address, &value);
-                        arm_write_register(p, i, value)
+                        arm_write_register(p, i, value);
                     }
                     address += 4;
                 }
@@ -417,7 +422,7 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
                     uint32_t value;
                     arm_read_word(p, address, &value);
 
-                    arm_write_register(p, 15, value & 0xFFFFFFFE)
+                    arm_write_register(p, 15, value & 0xFFFFFFFE);
                     // TODO T-BIT (P A4-37, 187 pour les gens pas doués)
                     address += 4;
                 }
