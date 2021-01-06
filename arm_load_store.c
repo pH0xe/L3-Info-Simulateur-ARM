@@ -96,6 +96,16 @@ int condition(arm_core p, uint32_t ins) {
     return UNDEFINED_INSTRUCTION;
 }
 
+int numberOfSetBits(uint16_t champ) {
+    int count = 0;
+    for (int i = 0; i < 16; i++) {
+        if (get_bit(champ, i) == 1){
+            count++;
+        }
+    }
+    return count;
+}
+
 uint32_t shift(arm_core p, uint32_t ins, uint32_t valRm) {
     int shift_type = get_bits(ins, 6,5);
     uint8_t shift_value = get_bits(ins, 11, 7);
@@ -281,6 +291,52 @@ uint32_t getAddressModeBW(arm_core p, uint32_t ins) {
     }
 }
 
+uint32_t* getAddressModeMulti(arm_core p, uint32_t ins){
+    uint32_t rn = get_bits(ins, 19, 16);
+    uint32_t valRn = arm_read_register(p, rn);
+
+    int after = get_bit(ins, 24) == 0;
+    int inc = get_bit(ins, 23) == 1;
+    int count = numberOfSetBits(get_bits(ins, 15, 0)) * 4;
+
+    if (inc && after){
+        // Increment after
+        uint32_t start_address = valRn;
+        uint32_t end_address = valRn + count - 4;
+        if (condition(p, ins) && get_bit(ins, 21) == 1){
+            arm_write_register(p, rn, valRn+count)
+        }
+        return [start_address, end_address];
+    } else if (inc && !after) {
+        // increment before
+        uint32_t start_address = valRn + 4;
+        uint32_t end_address = valRn + count;
+        if (condition(p, ins) && get_bit(ins, 21) == 1){
+            arm_write_register(p, rn, valRn+count)
+        }
+        return [start_address, end_address];
+
+    } else if (!inc && after) {
+        //decrement after A5-45
+        uint32_t start_address = valRn - count + 4;
+        uint32_t end_address = valRn;
+        if (condition(p, ins) && get_bit(ins, 21) == 1){
+            arm_write_register(p, rn, valRn - count)
+        }
+        return [start_address, end_address];
+
+    } else if (!inc && !after) {
+        // decrement before
+        uint32_t start_address = valRn - count;
+        uint32_t end_address = valRn - 4;
+        if (condition(p, ins) && get_bit(ins, 21) == 1){
+            arm_write_register(p, rn, valRn - count)
+        }
+        return [start_address, end_address];
+    }
+    return NULL;
+}
+
 int arm_load_store(arm_core p, uint32_t ins) {
     int is_load = get_bit(ins, 20) == 1;
     int is_H = get_bits(ins, 27, 25) == 0 && get_bits(ins, 7, 4) == 0xB;
@@ -336,6 +392,59 @@ int arm_load_store(arm_core p, uint32_t ins) {
 }
 
 int arm_load_store_multiple(arm_core p, uint32_t ins) {
+    int is_load = get_bit(ins, 20) == 1;
+    uint32_t addresses = *getAddressModeMulti(p, ins);
+    if (addresses == NULL) {
+        return -1;
+    }
+
+    if (is_load){
+        // LDM(1)
+        if (get_bit(ins, 22) == 0){
+            if (condition(p, ins)){
+                uint32_t address = addresses[0];
+
+                for (int i = 0; i < 15; i++) {
+                    if (get_bit(ins, 0) == 1) {
+                        uint32_t value;
+                        arm_read_word(p, address, &value);
+                        arm_write_register(p, i, value)
+                    }
+                    address += 4;
+                }
+
+                if (get_bit(ins, 15) == 1) {
+                    uint32_t value;
+                    arm_read_word(p, address, &value);
+
+                    arm_write_register(p, 15, value & 0xFFFFFFFE)
+                    // TODO T-BIT (P A4-37, 187 pour les gens pas doués)
+                    address += 4;
+                }
+
+                if (addresses[1] != address - 4) {
+                    return -1;
+                }
+            }
+        }
+    } else {
+        if (get_bit(ins, 22) == 0){
+            if (condition(p, ins)) {
+                uint32_t address = addresses[0];
+
+                for (int i = 0; i < 16; i++) {
+                    if (get_bit(ins, i) == 1) {
+                        arm_write_word(p, address, arm_read_register(p, i));
+                        address += 4;
+                    }
+                }
+
+                if (addresses[1] != address - 4) {
+                    return -1;
+                }
+            }
+        }
+    }
     return UNDEFINED_INSTRUCTION;
 }
 
