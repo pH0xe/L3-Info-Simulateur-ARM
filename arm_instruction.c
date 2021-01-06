@@ -59,6 +59,8 @@ static int arm_execute_instruction(arm_core p) {
             return arm_branch(p, val);
         case 6:         //Coprocessor Load/Store
             return arm_coprocessor_load_store(p, val);
+        case 7:
+            return arm_coprocessor_others_swi(p, val);
         default:
             return -1;
     }
