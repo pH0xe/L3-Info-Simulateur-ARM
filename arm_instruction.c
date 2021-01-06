@@ -29,49 +29,41 @@ Contact: Guillaume.Huard@imag.fr
 #include "util.h"
 
 static int arm_execute_instruction(arm_core p) {
-    int result;
     uint32_t val;
     uint8_t champ;
-    result = arm_fetch(p, &val);
+    arm_fetch(p, &val);
     if (((val & 0xF0000000) >> 28) == 0xF){
         return -1;
     } 
     champ = (uint8_t)((val & 0x0E000000) >> 25);
     switch (champ){
-        case 0:         //Data processing
-            if (((get_bits(val,24,23) == 2) && (get_bit(val,20) == 0)) && (get_bit(val,4) == 0 || (get_bit(val,7) == 0 && get_bit(val,4) == 1))){
+        case 0:         //Data processing & load store
+            if (get_bit(val, 4) == 1 && get_bit(val, 7) == 1) {
+                return arm_load_store(p, val);
+            }
+            else if (((get_bits(val,24,23) == 2) && (get_bit(val,20) == 0)) && (get_bit(val,4) == 0 || (get_bit(val,7) == 0 && get_bit(val,4) == 1))){
                 return arm_miscellaneous(p, val);
             }
             else {
                 return arm_data_processing_shift(p, val);      
-            } 
-            break;
+            }
         case 1:         //Data processing
             return arm_data_processing_immediate_msr(p, val);
-            break;
         case 2:         //Load/Store
             return arm_load_store(p, val);
-            break;
         case 3:         //Load/Store
             return arm_load_store(p, val);
-            break;
         case 4:         //Load/Store
             return arm_load_store_multiple(p, val);
-            break;
         case 5:         //Branches
             return arm_branch(p, val);
-            break;
         case 6:         //Coprocessor Load/Store
             return arm_coprocessor_load_store(p, val);
-            break;
         case 7:
             return arm_coprocessor_others_swi(p, val);
-            break;
-        default: 
+        default:
             return -1;
-            break;  
-    }   
-    return result;
+    }
 }
 
 int arm_step(arm_core p) {
