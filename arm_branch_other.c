@@ -25,6 +25,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "util.h"
 #include <debug.h>
 #include <stdlib.h>
+#include "arm_load_store.h"
 
 
 int arm_branch(arm_core p, uint32_t ins) {
@@ -111,5 +112,20 @@ int arm_coprocessor_others_swi(arm_core p, uint32_t ins) {
 }
 
 int arm_miscellaneous(arm_core p, uint32_t ins) {
+    int arm_miscellaneous(arm_core p, uint32_t ins) {
+    if(get_bits(ins, 7 ,4) == 0 && get_bit(ins, 21) == 1){
+        if(condition(p, ins)){ //MRS
+            uint8_t champ = get_bits(ins, 27, 25);
+            uint8_t Rd = get_bits(ins, 15, 12);
+            uint8_t cond = get_bits(ins, 31, 28);
+            if(get_bit(ins,22) == 1){
+                arm_write_register(p, Rd, arm_read_spsr(p));
+            } else {
+                arm_write_register(p, Rd, arm_read_cpsr(p));
+            }
+            return 0;
+        }
+    }
     return UNDEFINED_INSTRUCTION;
+}
 }
