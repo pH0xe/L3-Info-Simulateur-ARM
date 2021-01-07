@@ -29,7 +29,6 @@ int arm_load_store(arm_core p, uint32_t ins);
 int arm_load_store_multiple(arm_core p, uint32_t ins);
 int arm_coprocessor_load_store(arm_core p, uint32_t ins);
 
-int condition(arm_core p, uint32_t ins);
 int numberOfSetBits(uint16_t champ);
 uint32_t shift(arm_core p, uint32_t ins, uint32_t valRm);
 uint32_t getAddressModeHalf(arm_core p, uint32_t ins);

@@ -23,6 +23,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_load_store.h"
 #include "arm_exception.h"
 #include "arm_constants.h"
+#include "arm_instruction.h"
 #include "util.h"
 #include "debug.h"
 
@@ -39,62 +40,6 @@ Contact: Guillaume.Huard@imag.fr
  *      STM(1) - (A4-189) 27-25 = 4 && 22 = 0 && 20 = 0
  *
  */
-
-int condition(arm_core p, uint32_t ins) {
-    uint8_t cond = get_bits(ins,31,28);
-    uint32_t cpsr_value=arm_read_cpsr(p);
-    switch (cond){
-        case 0:     //EQ
-            if(get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 1:     //NE
-            if(!get_bit(cpsr_value,Z))return 1;
-            break;
-        case 2:     //CS/HS
-            if(get_bit(cpsr_value,C)) return 1;
-            break;
-        case 3:     //CC/LO
-            if(!get_bit(cpsr_value,C)) return 1;
-            break;
-        case 4:     //MI
-            if(get_bit(cpsr_value,N)) return 1;
-            break;
-        case 5:     //PL
-            if(!get_bit(cpsr_value,N)) return 1;
-            break;
-        case 6:     //VS
-            if(get_bit(cpsr_value,V)) return 1;
-            break;
-        case 7:     //VC
-            if(!get_bit(cpsr_value,V)) return 1;
-            break;
-        case 8:     //HI
-            if(get_bit(cpsr_value,C) && !get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 9:     //LS
-            if(!get_bit(cpsr_value,C) || get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 10:    //GE
-            if(get_bit(cpsr_value,N) == get_bit(cpsr_value,V)) return 1;
-            break;
-        case 11:    //LT
-            if(get_bit(cpsr_value,N) != get_bit(cpsr_value,V)) return 1;
-            break;
-        case 12:    //GT
-            if((get_bit(cpsr_value,N) == get_bit(cpsr_value,V)) && !get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 13:    //LE
-            if((get_bit(cpsr_value,N) != get_bit(cpsr_value,V)) || get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 14:    //AL
-            return 1;
-            break;
-        default:    //ERROR
-            return UNDEFINED_INSTRUCTION;
-            break;
-    }
-    return UNDEFINED_INSTRUCTION;
-}
 
 int numberOfSetBits(uint16_t champ) {
     int count = 0;

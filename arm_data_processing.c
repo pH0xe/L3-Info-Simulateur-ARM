@@ -70,84 +70,77 @@ void ZNCV_update(arm_core p, int* oVerflow, int* Carry, uint32_t value, int oV, 
 	}
 	arm_write_cpsr(p,cpsr_value);
 }
+
 uint32_t data_processing_immediate_operand(arm_core p, uint32_t ins,uint32_t (*operateur)(uint32_t, uint32_t), int* oVerflow, int* Carry){
-	uint32_t shifter_operand,immediate;
-	uint8_t rotate,rn;
-	immediate = get_bits(ins,7,0);
-	rotate = get_bits(ins,11,8);
-	rn = get_bits(ins,19,16);
-	shifter_operand = ror(immediate,(rotate*2));
-	shifter_operand = operateur(arm_read_register(p,rn), shifter_operand); 
-	return shifter_operand;
+    uint32_t immediate = get_bits(ins,7,0);
+    uint8_t rotate = get_bits(ins,11,8);
+    uint8_t rn = get_bits(ins,19,16);
+    uint32_t valRn = arm_read_register(p,rn);
+    uint32_t shifter_operand = ror(immediate,(rotate*2));
+	uint32_t value = operateur(valRn, shifter_operand);
+
+    if ((get_bit(shifter_operand,31) == get_bit(valRn, 31)) && (get_bit(value,31) != get_bit(shifter_operand,31))) *oVerflow = 1;
+    else *oVerflow = 0;
+
+    if(shifter_operand > value || valRn > value) *Carry = 1;
+    else *Carry=0;
+
+	return value;
 }
+
 uint32_t data_processing_operand(arm_core p, uint32_t ins, uint32_t (*operateur)(uint32_t, uint32_t), int* oVerflow, int* Carry){
 	uint32_t value, shifter_operand;
 	uint8_t rn, rm, rs, shift_value, champ;
 	champ = get_bits(ins,6,4);
 	rn = get_bits(ins,19,16);
 	rm = get_bits(ins,3,0);
+
 	switch(champ){
 		case 0:		//LSL imm
 			shift_value = get_bits(ins,11,7);
 			shifter_operand = (arm_read_register(p,rm) << shift_value);
-			value = operateur(arm_read_register(p,rn), shifter_operand); 
-			
 			break;
 		case 1:		//LSL reg
 			rs = get_bits(ins,11,8);
 			shifter_operand = (arm_read_register(p,rm) << arm_read_register(p,rs));
-			value = operateur(arm_read_register(p,rn),shifter_operand);
-			
 			break;
 		case 2:		//LSR imm
 			shift_value = get_bits(ins,11,7);
-			shifter_operand = (arm_read_register(p,rm) >> shift_value); 
-			value = operateur(arm_read_register(p,rn), shifter_operand); 
-			
+			shifter_operand = (arm_read_register(p,rm) >> shift_value);
 			break;
 		case 3:		//LSR reg
 			rs = get_bits(ins,11,8);
 			shifter_operand = (arm_read_register(p,rm) >> arm_read_register(p,rs));
-			value = operateur(arm_read_register(p,rn), shifter_operand);
-			
 			break;
 		case 4:		//ASR imm
 			shift_value = get_bits(ins,11,7);
 			shifter_operand = asr(arm_read_register(p,rm), shift_value);
-			value = operateur(arm_read_register(p,rn), shifter_operand);
-			
 			break;
 		case 5:		//ASR reg
 			rs = get_bits(ins,11,8);
 			shifter_operand = asr(arm_read_register(p,rm), arm_read_register(p,rs));
-			value = operateur(arm_read_register(p,rn), shifter_operand);
-			
 			break;
 		case 6:		//ROR imm
 			shift_value = get_bits(ins,11,7);
 			shifter_operand = ror(arm_read_register(p,rm), shift_value);
-			value = operateur(arm_read_register(p,rn), shifter_operand);
-			
 			break;
 		case 7:		//ROR reg
 			rs = get_bits(ins,11,8);
 			shifter_operand = ror(arm_read_register(p,rm), arm_read_register(p,rs));
-			value = operateur(arm_read_register(p,rn), shifter_operand);
-			
 			break;
 		default:	//ERROR
 			return UNDEFINED_INSTRUCTION;
-			break;
 	}
-	if ((get_bit(shifter_operand,31) == get_bit(arm_read_register(p,rn), 31)) && (get_bit(value,31) != get_bit(shifter_operand,31))){
-		*oVerflow = 1;
-	}
+
+	uint32_t valRn = arm_read_register(p,rn);
+    value = operateur(valRn, shifter_operand);
+
+    if ((get_bit(shifter_operand,31) == get_bit(valRn, 31)) && (get_bit(value,31) != get_bit(shifter_operand,31))) *oVerflow = 1;
 	else *oVerflow = 0;
-	if(shifter_operand > value || arm_read_register(p,rn) > value){
-		*Carry = 1;
-	}
+
+	if(shifter_operand > value || valRn > value) *Carry = 1;
 	else *Carry=0;
-	//printf("r0: %x\n", arm_read_register(p,0));
+
 	return value;
 } 
 
@@ -159,434 +152,155 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 	uint8_t opcode = get_bits(ins,24,21);	//Opcode - bits 21 à 24
 	uint8_t s = get_bit(ins,20);			//Bit shift
 	int oVerflow,Carry;
+    uint32_t (*operandType)(arm_core, uint32_t, uint32_t (*operateur)(uint32_t, uint32_t), int*, int*);
+
+    if (get_bit(ins, 25) == 0) operandType = data_processing_operand;
+    else operandType = data_processing_immediate_operand;
 
 	switch(opcode){
 		case 0:		//AND
-			value = data_processing_operand(p, ins, logical_and, &oVerflow, &Carry);
+            value = operandType(p, ins, logical_and, &oVerflow, &Carry);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
+				if(rd != 15)
 					ZNCV_update(p, &oVerflow, 0, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 1:		//EOR
-			value = data_processing_operand(p, ins, logical_eor, &oVerflow, &Carry);
+			value = operandType(p, ins, logical_eor, &oVerflow, &Carry);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, 0, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+				if(rd != 15)
+				    ZNCV_update(p, &oVerflow, 0, value, 0, 1);
+				else if (arm_current_mode_has_spsr(p))
+				    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 2:		//SUB
-			value = data_processing_operand(p, ins, sub, &oVerflow, &Carry);
+			value = operandType(p, ins, sub, &oVerflow, &Carry);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
+				if(rd != 15)
 					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 3:		//RSB
-			value = data_processing_operand(p, ins, rsb, &oVerflow, &Carry);
+			value = operandType(p, ins, rsb, &oVerflow, &Carry);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
+				if(rd != 15)
 					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 4:		//ADD
-			value = data_processing_operand(p, ins, add, &oVerflow, &Carry);
+			value = operandType(p, ins, add, &oVerflow, &Carry);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
+				if(rd != 15)
 					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 5:		//ADC
-			value = data_processing_operand(p, ins, add, &oVerflow, &Carry);
+			value = operandType(p, ins, add, &oVerflow, &Carry);
 			value = value + get_bit(arm_read_cpsr(p),C);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
+				if(rd != 15)
 					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 6:		//SBC
-			value = data_processing_operand(p, ins, sub, &oVerflow, &Carry);
+			value = operandType(p, ins, sub, &oVerflow, &Carry);
 			value = value - ~get_bit(arm_read_cpsr(p),C);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
+				if(rd != 15)
 					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
+
 		case 7:		//RSC
-			value = data_processing_operand(p, ins, rsb, &oVerflow, &Carry);
+			value = operandType(p, ins, rsb, &oVerflow, &Carry);
 			value = value - ~get_bit(arm_read_cpsr(p),C);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+				if(rd != 15)
+				    ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 8:		//TST
-			value = data_processing_operand(p, ins, logical_and, &oVerflow, &Carry);
+			value = operandType(p, ins, logical_and, &oVerflow, &Carry);
 			ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
 			return 0;
-			break;
 		case 9:		//TEQ
-			value = data_processing_operand(p, ins, logical_eor, &oVerflow, &Carry);
+			value = operandType(p, ins, logical_eor, &oVerflow, &Carry);
 			ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
 			return 0;
-			break;
 		case 10:	//CMP
-			value = data_processing_operand(p, ins, sub, &oVerflow, &Carry);
+			value = operandType(p, ins, sub, &oVerflow, &Carry);
 			Carry = Carry == 1 ? 0 : 1;
 			ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
 			return 0;
-			break;
 		case 11:	//CMN
-			value = data_processing_operand(p, ins, add, &oVerflow, &Carry);
+			value = operandType(p, ins, add, &oVerflow, &Carry);
 			ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
 			return 0;
-			break;
 		case 12:	//ORR
-			value = data_processing_operand(p, ins, logical_or, &oVerflow, &Carry);
+			value = operandType(p, ins, logical_or, &oVerflow, &Carry);
 			arm_write_register(p, rd, value);
 			if(s){
 				if(rd != 15){
 					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
 				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 13:	//MOV
-			value = data_processing_operand(p, ins, mov, &oVerflow, &Carry);
+			value = operandType(p, ins, mov, &oVerflow, &Carry);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
+				if(rd != 15)
 					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 14:	//BIC
-			value = data_processing_operand(p, ins, bic, &oVerflow, &Carry);
+			value = operandType(p, ins, bic, &oVerflow, &Carry);
 			arm_write_register(p, rd, value);
 			if(s){
-				if(rd != 15){
+				if(rd != 15)
 					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		case 15:	//MVN
-			value = data_processing_operand(p, ins, mov, &oVerflow, &Carry);
+			value = operandType(p, ins, mov, &oVerflow, &Carry);
 			arm_write_register(p, rd, ~value);
 			if(s){
-				if(rd != 15){
+				if(rd != 15)
 					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
+                else if (arm_current_mode_has_spsr(p))
+                    arm_write_cpsr(p, arm_read_spsr(p));
 			}
 			return 0;
-			break;
 		default:	//ERROR
 			return UNDEFINED_INSTRUCTION;
-			break;
 	}
-    return UNDEFINED_INSTRUCTION;
-}
-
-int arm_data_processing_immediate_msr(arm_core p, uint32_t ins) {
-    uint8_t rd = get_bits(ins,15,12);
-	uint32_t value;
-	uint8_t opcode = get_bits(ins,24,21);	//Opcode - bits 21 à 24
-	uint8_t s = get_bit(ins,20);			//Bit shift
-	int oVerflow,Carry;
-
-	switch(opcode){
-		case 0:		//AND
-			value = data_processing_immediate_operand(p, ins, logical_and, &oVerflow, &Carry);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, 0, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 1:		//EOR
-			value = data_processing_immediate_operand(p, ins, logical_eor, &oVerflow, &Carry);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, 0, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 2:		//SUB
-			value = data_processing_immediate_operand(p, ins, sub, &oVerflow, &Carry);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 3:		//RSB
-			value = data_processing_immediate_operand(p, ins, rsb, &oVerflow, &Carry);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 4:		//ADD
-			value = data_processing_immediate_operand(p, ins, add, &oVerflow, &Carry);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 5:		//ADC
-			value = data_processing_immediate_operand(p, ins, add, &oVerflow, &Carry);
-			value = value + get_bit(arm_read_cpsr(p),C);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 6:		//SBC
-			value = data_processing_immediate_operand(p, ins, sub, &oVerflow, &Carry);
-			value = value - ~get_bit(arm_read_cpsr(p),C);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 7:		//RSC
-			value = data_processing_immediate_operand(p, ins, rsb, &oVerflow, &Carry);
-			value = value - ~get_bit(arm_read_cpsr(p),C);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 8:		//TST
-			value = data_processing_immediate_operand(p, ins, logical_and, &oVerflow, &Carry);
-			ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
-			return 0;
-			break;
-		case 9:		//TEQ
-			value = data_processing_immediate_operand(p, ins, logical_eor, &oVerflow, &Carry);
-			ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
-			return 0;
-			break;
-		case 10:	//CMP
-			value = data_processing_immediate_operand(p, ins, sub, &oVerflow, &Carry);
-			Carry = Carry == 1 ? 0 : 1;
-			ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-			return 0;
-			break;
-		case 11:	//CMN
-			value = data_processing_immediate_operand(p, ins, add, &oVerflow, &Carry);
-			ZNCV_update(p, &oVerflow, &Carry, value, 1, 1);
-			return 0;
-			break;
-		case 12:	//ORR
-			value = data_processing_immediate_operand(p, ins, logical_or, &oVerflow, &Carry);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 13:	//MOV
-			value = data_processing_immediate_operand(p, ins, mov ,&oVerflow, &Carry);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 14:	//BIC
-			value = data_processing_immediate_operand(p, ins, bic, &oVerflow, &Carry);
-			arm_write_register(p, rd, value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		case 15:	//MVN
-			value = data_processing_immediate_operand(p, ins, mov, &oVerflow, &Carry);
-			arm_write_register(p, rd, ~value);
-			if(s){
-				if(rd != 15){
-					ZNCV_update(p, &oVerflow, &Carry, value, 0, 1);
-				}
-				else{
-					if (arm_current_mode_has_spsr(p)){
-						arm_write_cpsr(p, arm_read_spsr(p));
-					}
-				}
-			}
-			return 0;
-			break;
-		default:	//ERROR
-			return UNDEFINED_INSTRUCTION;
-			break;
-	}
-    return UNDEFINED_INSTRUCTION;
 }

@@ -25,78 +25,26 @@ Contact: Guillaume.Huard@imag.fr
 #include "util.h"
 #include <debug.h>
 #include <stdlib.h>
-#include "arm_load_store.h"
+#include "arm_instruction.h"
 
 
 int arm_branch(arm_core p, uint32_t ins) {
-    uint8_t cond = get_bits(ins,31,28);
-    int branch=0;
-    uint32_t cpsr_value=arm_read_cpsr(p);
-    switch (cond){
-        case 0:     //EQ
-            if(get_bit(cpsr_value,Z)) branch=1;
-            break;
-        case 1:     //NE
-            if(!get_bit(cpsr_value,Z)) branch=1;
-            break;
-        case 2:     //CS/HS
-            if(get_bit(cpsr_value,C)) branch=1;
-            break;
-        case 3:     //CC/LO
-            if(!get_bit(cpsr_value,C)) branch=1;
-            break;
-        case 4:     //MI
-            if(get_bit(cpsr_value,N)) branch=1;
-            break;
-        case 5:     //PL
-            if(!get_bit(cpsr_value,N)) branch=1;
-            break;
-        case 6:     //VS
-            if(get_bit(cpsr_value,V)) branch=1;
-            break;
-        case 7:     //VC
-            if(!get_bit(cpsr_value,V)) branch=1;
-            break;
-        case 8:     //HI
-            if(get_bit(cpsr_value,C) && !get_bit(cpsr_value,Z)) branch=1;
-            break;
-        case 9:     //LS
-            if(!get_bit(cpsr_value,C) || get_bit(cpsr_value,Z)) branch=1;
-            break;
-        case 10:    //GE
-            if(get_bit(cpsr_value,N) == get_bit(cpsr_value,V)) branch=1;
-            break;
-        case 11:    //LT
-            if(get_bit(cpsr_value,N) != get_bit(cpsr_value,V)) branch=1;
-            break;
-        case 12:    //GT
-            if((get_bit(cpsr_value,N) == get_bit(cpsr_value,V)) && !get_bit(cpsr_value,Z)) branch=1;
-            break;
-        case 13:    //LE
-            if((get_bit(cpsr_value,N) != get_bit(cpsr_value,V)) || get_bit(cpsr_value,Z)) branch=1;
-            break;
-        case 14:    //AL
-            branch=1;
-            break;
-        default:    //ERROR
-            return UNDEFINED_INSTRUCTION;
-            break;
-    }
     uint32_t pc = arm_read_register(p,15);
+
     if(get_bit(ins,24)){ //BL
         arm_write_register(p, 14, pc - 4);
     }
-    if(branch){
+
+    if(condition(p, ins)){
         uint32_t offset = get_bits(ins,23,0);
         offset = ((~offset + 1) << 8) >> 8;   //Complément à 2 sur 24 bits
-        if(get_bit(offset,23)){
-            offset = set_bits(offset,29,24,0x3F); 
-        }
+
+        if(get_bit(offset,23)) offset = set_bits(offset,29,24,0x3F);
         else offset = set_bits(offset,29,24,0);  //Extension signée sur 30 bits
+
         offset = offset << 2;
         pc = pc - offset;
         arm_write_register(p,15,pc);
-
     }
     return 0;
 }
@@ -115,11 +63,10 @@ int arm_miscellaneous(arm_core p, uint32_t ins) {
     if(get_bits(ins, 7 ,4) == 0 && get_bit(ins, 21) == 1){
         if(condition(p, ins)){ //MRS
             uint8_t Rd = get_bits(ins, 15, 12);
-            if(get_bit(ins,22) == 1){
-                arm_write_register(p, Rd, arm_read_spsr(p));
-            } else {
-                arm_write_register(p, Rd, arm_read_cpsr(p));
-            }
+
+            if(get_bit(ins,22) == 1) arm_write_register(p, Rd, arm_read_spsr(p));
+            else arm_write_register(p, Rd, arm_read_cpsr(p));
+
             return 0;
         }
     }
