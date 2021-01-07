@@ -61,7 +61,7 @@ int main() {
         val += 0x11;
     }
     printf("On écrit la valeur 0x12345678 dans CPSR\n");
-    write_cpsr(r,0x12345678);
+    // write_cpsr(r,0x12345678);
     for (int i=0;i<18;i++){
         printf("Le registre %s contient la valeur %x\n",arm_get_register_name(i), read_register(r,i));
     }

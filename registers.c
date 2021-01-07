@@ -25,38 +25,82 @@ Contact: Guillaume.Huard@imag.fr
 #include <stdlib.h>
 #include "trace.h"
 #include <string.h>
+#include "util.h"
+
+/*
+ * Mode = b4-0 -> cpsr
+ * USR -> 0x10
+ * FIQ -> 0x11
+ * IRQ -> 0x12
+ * SVC -> 0x13
+ * ABT -> 0x17
+ * UND -> 0x1b
+ * SYS -> 0x1f
+ */
 
 struct registers_data {
-    uint8_t mode;
-    uint8_t name;
-    uint32_t **data;
+    uint32_t *data;
 };
+
+uint8_t getRegister(registers r, uint8_t reg) {
+    if (get_mode(r) == USR || get_mode(r) == SYS) return reg;
+
+    if (reg < 8 || reg == 15 || reg == 16) return reg;
+
+    if (get_mode(r) != FIQ && reg < 13) return reg;
+
+    if (reg < 13) return reg + 10;
+
+    switch (get_mode(r)) {
+        case SVC:
+            if (reg == 13) return R13_SVC;
+            if (reg == 14) return R14_SVC;
+            return SPSR_SVC;
+        case ABT:
+            if (reg == 13) return R13_ABT;
+            if (reg == 14) return R14_ABT;
+            return SPSR_ABT;
+        case UND:
+            if (reg == 13) return R13_UND;
+            if (reg == 14) return R14_UND;
+            return SPSR_UND;
+        case IRQ:
+            if (reg == 13) return R13_IRQ;
+            if (reg == 14) return R14_IRQ;
+            return SPSR_IRQ;
+        case FIQ:
+            if (reg == 13) return R13_FIQ;
+            if (reg == 14) return R14_FIQ;
+            return SPSR_FIQ;
+    }
+    return -1;
+}
 
 registers registers_create() {
     registers r = malloc(sizeof(registers));
     if(r == NULL) return NULL;
-    r->mode=USR;
-    r->name=0;
-    r->data=malloc(32*sizeof(uint32_t*));
+
+    r->data=calloc(sizeof(uint32_t), 38);
     if(r->data == NULL) return NULL;
-    for (int i=0;i<32;i++){
-        r->data[i]=calloc(18,sizeof(uint32_t));
-        if(r->data[i] == NULL) return NULL;
-    }
+
+    // CPSR
+    uint32_t cpsr = read_cpsr(r);
+    cpsr = set_bits(cpsr, 4, 0, SYS);
+    cpsr = clr_bit(cpsr, 7);
+    cpsr = clr_bit(cpsr, 6);
+    write_cpsr(r, cpsr);
+
     return r;
 }
 
 void registers_destroy(registers r) {
-    for(int i=0;i<16;i++){
-        free(r->data[i]);
-    }
     free(r->data);
     free(r);
 }
 
 uint8_t get_mode(registers r) {
-    return r->mode;
-} 
+    return get_bits(read_cpsr(r), 4, 0);
+}
 
 int current_mode_has_spsr(registers r) {
     return !(get_mode(r) == USR || get_mode(r) == SYS);
@@ -67,49 +111,48 @@ int in_a_privileged_mode(registers r) {
 }
 
 uint32_t read_register(registers r, uint8_t reg) {
-    uint32_t value=r->data[get_mode(r)][reg];
-    return value;
+    return r->data[getRegister(r, reg)];
 }
 
 uint32_t read_usr_register(registers r, uint8_t reg) {
-    if(get_mode(r) == USR) return r->data[USR][reg];
-    return -1;
+    return r->data[reg];
 }
 
 uint32_t read_cpsr(registers r) {
-    uint32_t value=r->data[get_mode(r)][CPSR];
-    return value;
+    return r->data[CPSR];
 }
 
 uint32_t read_spsr(registers r) {
-    if (current_mode_has_spsr(r)) return r->data[get_mode(r)][SPSR];
-    return 0;
+    if (current_mode_has_spsr(r)) return r->data[getRegister(r , SPSR)];
+    return -1;
 }
 
 void write_register(registers r, uint8_t reg, uint32_t value) {
     uint32_t mask = ~(0xFFFFFFFF);
-    r->data[get_mode(r)][reg]&= mask;
-    r->data[get_mode(r)][reg]|= value;
+    uint8_t rg = getRegister(r, reg);
+    r->data[rg] &= mask;
+    r->data[rg] |= value;
 }
 
 void write_usr_register(registers r, uint8_t reg, uint32_t value) {
     if(get_mode(r) == USR){
         uint32_t mask = ~(0xFFFFFFFF);
-        r->data[USR][reg]&= mask;
-        r->data[USR][reg]|= value;
+        r->data[reg] &= mask;
+        r->data[reg] |= value;
     }
 }
 
 void write_cpsr(registers r, uint32_t value) {
     uint32_t mask = ~(0xFFFFFFFF);
-    r->data[get_mode(r)][CPSR]&= mask;
-    r->data[get_mode(r)][CPSR]|= value;
+    r->data[CPSR] &= mask;
+    r->data[CPSR] |= value;
 }
 
 void write_spsr(registers r, uint32_t value) {
     if (current_mode_has_spsr(r)){
         uint32_t mask = ~(0xFFFFFFFF);
-        r->data[get_mode(r)][SPSR]&= mask;
-        r->data[get_mode(r)][SPSR]|= value;
+        uint8_t rg = getRegister(r, SPSR);
+        r->data[rg] &= mask;
+        r->data[rg] |= value;
     }
 }

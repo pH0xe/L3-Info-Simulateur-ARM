@@ -23,6 +23,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_load_store.h"
 #include "arm_exception.h"
 #include "arm_constants.h"
+#include "arm_instruction.h"
 #include "util.h"
 #include "debug.h"
 
@@ -39,62 +40,6 @@ Contact: Guillaume.Huard@imag.fr
  *      STM(1) - (A4-189) 27-25 = 4 && 22 = 0 && 20 = 0
  *
  */
-
-int condition(arm_core p, uint32_t ins) {
-    uint8_t cond = get_bits(ins,31,28);
-    uint32_t cpsr_value=arm_read_cpsr(p);
-    switch (cond){
-        case 0:     //EQ
-            if(get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 1:     //NE
-            if(!get_bit(cpsr_value,Z))return 1;
-            break;
-        case 2:     //CS/HS
-            if(get_bit(cpsr_value,C)) return 1;
-            break;
-        case 3:     //CC/LO
-            if(!get_bit(cpsr_value,C)) return 1;
-            break;
-        case 4:     //MI
-            if(get_bit(cpsr_value,N)) return 1;
-            break;
-        case 5:     //PL
-            if(!get_bit(cpsr_value,N)) return 1;
-            break;
-        case 6:     //VS
-            if(get_bit(cpsr_value,V)) return 1;
-            break;
-        case 7:     //VC
-            if(!get_bit(cpsr_value,V)) return 1;
-            break;
-        case 8:     //HI
-            if(get_bit(cpsr_value,C) && !get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 9:     //LS
-            if(!get_bit(cpsr_value,C) || get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 10:    //GE
-            if(get_bit(cpsr_value,N) == get_bit(cpsr_value,V)) return 1;
-            break;
-        case 11:    //LT
-            if(get_bit(cpsr_value,N) != get_bit(cpsr_value,V)) return 1;
-            break;
-        case 12:    //GT
-            if((get_bit(cpsr_value,N) == get_bit(cpsr_value,V)) && !get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 13:    //LE
-            if((get_bit(cpsr_value,N) != get_bit(cpsr_value,V)) || get_bit(cpsr_value,Z)) return 1;
-            break;
-        case 14:    //AL
-            return 1;
-            break;
-        default:    //ERROR
-            return UNDEFINED_INSTRUCTION;
-            break;
-    }
-    return UNDEFINED_INSTRUCTION;
-}
 
 int numberOfSetBits(uint16_t champ) {
     int count = 0;
@@ -294,6 +239,7 @@ uint32_t getAddressModeBW(arm_core p, uint32_t ins) {
 void getAddressModeMulti(arm_core p, uint32_t ins, uint32_t* addresses){
     uint32_t rn = get_bits(ins, 19, 16);
     uint32_t valRn = arm_read_register(p, rn);
+    uint32_t start_address, end_address;
 
     int after = get_bit(ins, 24) == 0;
     int inc = get_bit(ins, 23) == 1;
@@ -301,42 +247,36 @@ void getAddressModeMulti(arm_core p, uint32_t ins, uint32_t* addresses){
 
     if (inc && after){
         // Increment after
-        uint32_t start_address = valRn;
-        uint32_t end_address = valRn + count - 4;
+        start_address = valRn;
+        end_address = valRn + count - 4;
         if (condition(p, ins) && get_bit(ins, 21) == 1){
             arm_write_register(p, rn, valRn+count);
         }
-
-        addresses[0] = start_address;
-        addresses[1] = end_address;
     } else if (inc && !after) {
         // increment before
-        uint32_t start_address = valRn + 4;
-        uint32_t end_address = valRn + count;
+        start_address = valRn + 4;
+        end_address = valRn + count;
         if (condition(p, ins) && get_bit(ins, 21) == 1){
             arm_write_register(p, rn, valRn+count);
         }
-        addresses[0] = start_address;
-        addresses[1] = end_address;
     } else if (!inc && after) {
         //decrement after A5-45
-        uint32_t start_address = valRn - count + 4;
-        uint32_t end_address = valRn;
+        start_address = valRn - count + 4;
+        end_address = valRn;
         if (condition(p, ins) && get_bit(ins, 21) == 1){
             arm_write_register(p, rn, valRn - count);
         }
-        addresses[0] = start_address;
-        addresses[1] = end_address;
     } else if (!inc && !after) {
         // decrement before
-        uint32_t start_address = valRn - count;
-        uint32_t end_address = valRn - 4;
+        start_address = valRn - count;
+        end_address = valRn - 4;
         if (condition(p, ins) && get_bit(ins, 21) == 1){
             arm_write_register(p, rn, valRn - count);
         }
-        addresses[0] = start_address;
-        addresses[1] = end_address;
+
     }
+    addresses[0] = start_address;
+    addresses[1] = end_address;
 }
 
 int arm_load_store(arm_core p, uint32_t ins) {
@@ -423,7 +363,6 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
                     arm_read_word(p, address, &value);
 
                     arm_write_register(p, 15, value & 0xFFFFFFFE);
-                    // TODO T-BIT (P A4-37, 187 pour les gens pas doués)
                     address += 4;
                 }
 

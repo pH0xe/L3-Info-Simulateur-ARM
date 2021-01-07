@@ -28,6 +28,62 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include "util.h"
 
+int condition(arm_core p, uint32_t ins) {
+    uint8_t cond = get_bits(ins,31,28);
+    uint32_t cpsr_value=arm_read_cpsr(p);
+    switch (cond){
+        case 0:     //EQ
+            if(get_bit(cpsr_value,Z)) return 1;
+            break;
+        case 1:     //NE
+            if(!get_bit(cpsr_value,Z))return 1;
+            break;
+        case 2:     //CS/HS
+            if(get_bit(cpsr_value,C)) return 1;
+            break;
+        case 3:     //CC/LO
+            if(!get_bit(cpsr_value,C)) return 1;
+            break;
+        case 4:     //MI
+            if(get_bit(cpsr_value,N)) return 1;
+            break;
+        case 5:     //PL
+            if(!get_bit(cpsr_value,N)) return 1;
+            break;
+        case 6:     //VS
+            if(get_bit(cpsr_value,V)) return 1;
+            break;
+        case 7:     //VC
+            if(!get_bit(cpsr_value,V)) return 1;
+            break;
+        case 8:     //HI
+            if(get_bit(cpsr_value,C) && !get_bit(cpsr_value,Z)) return 1;
+            break;
+        case 9:     //LS
+            if(!get_bit(cpsr_value,C) || get_bit(cpsr_value,Z)) return 1;
+            break;
+        case 10:    //GE
+            if(get_bit(cpsr_value,N) == get_bit(cpsr_value,V)) return 1;
+            break;
+        case 11:    //LT
+            if(get_bit(cpsr_value,N) != get_bit(cpsr_value,V)) return 1;
+            break;
+        case 12:    //GT
+            if((get_bit(cpsr_value,N) == get_bit(cpsr_value,V)) && !get_bit(cpsr_value,Z)) return 1;
+            break;
+        case 13:    //LE
+            if((get_bit(cpsr_value,N) != get_bit(cpsr_value,V)) || get_bit(cpsr_value,Z)) return 1;
+            break;
+        case 14:    //AL
+            return 1;
+            break;
+        default:    //ERROR
+            return UNDEFINED_INSTRUCTION;
+            break;
+    }
+    return UNDEFINED_INSTRUCTION;
+}
+
 static int arm_execute_instruction(arm_core p) {
     uint32_t val;
     uint8_t champ;
@@ -44,11 +100,13 @@ static int arm_execute_instruction(arm_core p) {
             else if (((get_bits(val,24,23) == 2) && (get_bit(val,20) == 0)) && (get_bit(val,4) == 0 || (get_bit(val,7) == 0 && get_bit(val,4) == 1))){
                 return arm_miscellaneous(p, val);
             }
-            else {
-                return arm_data_processing_shift(p, val);      
-            }
+            else if (condition(p, val))
+                return arm_data_processing_shift(p, val);
+            break;
         case 1:         //Data processing
-            return arm_data_processing_immediate_msr(p, val);
+            if (condition(p, val))
+                return arm_data_processing_shift(p, val);
+            break;
         case 2:         //Load/Store
             return arm_load_store(p, val);
         case 3:         //Load/Store
@@ -64,6 +122,7 @@ static int arm_execute_instruction(arm_core p) {
         default:
             return -1;
     }
+    return 0;
 }
 
 int arm_step(arm_core p) {

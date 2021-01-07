@@ -24,6 +24,29 @@ Contact: Guillaume.Huard@imag.fr
 #define __REGISTERS_H__
 #include <stdint.h>
 
+#define R8_FIQ 18
+#define R9_FIQ 19
+#define R10_FIQ 20
+#define R11_FIQ 21
+#define R12_FIQ 22
+#define R13_SVC 23
+#define R13_ABT 24
+#define R13_UND 25
+#define R13_IRQ 26
+#define R13_FIQ 27
+#define R14_SVC 28
+#define R14_ABT 29
+#define R14_UND 30
+#define R14_IRQ 31
+#define R14_FIQ 32
+#define SPSR_SVC 33
+#define SPSR_ABT 34
+#define SPSR_UND 35
+#define SPSR_IRQ 36
+#define SPSR_FIQ 37
+
+
+
 typedef struct registers_data *registers;
 
 registers registers_create();
