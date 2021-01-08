@@ -37,46 +37,46 @@ void arm_exception(arm_core p, unsigned char exception) {
     uint32_t spsr = cpsr_value;
     uint8_t pc_offset = 0;
     uint8_t pc_value = 0;
-    clr_bit(cpsr_value, 5);
-    set_bit(cpsr_value, 7);
-    clr_bit(cpsr_value, 9);
+    cpsr_value = clr_bit(cpsr_value, 5);
+    cpsr_value = set_bit(cpsr_value, 7);
+    cpsr_value = clr_bit(cpsr_value, 9);
     switch (exception)
     {
         case RESET:
-            set_bits(cpsr_value, 4 , 0, SVC);
-            set_bit(cpsr_value, 6);
-            set_bit(cpsr_value, 8);
+            cpsr_value = set_bits(cpsr_value, 4 , 0, SVC);
+            cpsr_value = set_bit(cpsr_value, 6);
+            cpsr_value = set_bit(cpsr_value, 8);
             break;
         case UNDEFINED_INSTRUCTION:
-            set_bits(cpsr_value, 4 , 0, UND);
+            cpsr_value = set_bits(cpsr_value, 4 , 0, UND);
             pc_value = 4;
             break;
         case SOFTWARE_INTERRUPT:
-            set_bits(cpsr_value, 4 , 0, SVC);
+            cpsr_value = set_bits(cpsr_value, 4 , 0, SVC);
             pc_value = 8;
             break;
         case PREFETCH_ABORT:
-            set_bits(cpsr_value, 4 , 0, ABT);
-            set_bit(cpsr_value, 8);
+            cpsr_value = set_bits(cpsr_value, 4 , 0, ABT);
+            cpsr_value = set_bit(cpsr_value, 8);
             pc_offset = 4;
             pc_value = 12;
             break;
         case DATA_ABORT:
-            set_bits(cpsr_value, 4 , 0, ABT);
-            set_bit(cpsr_value, 8);
+            cpsr_value = set_bits(cpsr_value, 4 , 0, ABT);
+            cpsr_value = set_bit(cpsr_value, 8);
             pc_offset = 8;
             pc_value = 16;
             break;
         case INTERRUPT:
-            set_bits(cpsr_value, 4 , 0, IRQ);
-            set_bit(cpsr_value, 8);
+            cpsr_value = set_bits(cpsr_value, 4 , 0, IRQ);
+            cpsr_value = set_bit(cpsr_value, 8);
             pc_offset = 4;
             pc_value = 24;
             break;
         case FAST_INTERRUPT:
-            set_bits(cpsr_value, 4 , 0, FIQ);
-            set_bit(cpsr_value, 6);
-            set_bit(cpsr_value, 8);
+            cpsr_value = set_bits(cpsr_value, 4 , 0, FIQ);
+            cpsr_value = set_bit(cpsr_value, 6);
+            cpsr_value = set_bit(cpsr_value, 8);
             pc_offset = 4;
             pc_value = 28;
             break;
