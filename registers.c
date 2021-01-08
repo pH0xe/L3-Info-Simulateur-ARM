@@ -43,15 +43,16 @@ struct registers_data {
 };
 
 uint8_t getRegister(registers r, uint8_t reg) {
-    if (get_mode(r) == USR || get_mode(r) == SYS) return reg;
+    uint8_t mode = get_mode(r);
+    if (mode == USR || mode == SYS) return reg;
 
     if (reg < 8 || reg == 15 || reg == 16) return reg;
 
-    if (get_mode(r) != FIQ && reg < 13) return reg;
+    if (mode!= FIQ && reg < 13) return reg;
 
     if (reg < 13) return reg + 10;
 
-    switch (get_mode(r)) {
+    switch (mode) {
         case SVC:
             if (reg == 13) return R13_SVC;
             if (reg == 14) return R14_SVC;
