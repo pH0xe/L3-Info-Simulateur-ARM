@@ -1,24 +1,24 @@
 /*
-Armator - simulateur de jeu d'instruction ARMv5T à but pédagogique
+Armator - simulateur de jeu d'instruction ARMv5T ï¿½ but pï¿½dagogique
 Copyright (C) 2011 Guillaume Huard
 Ce programme est libre, vous pouvez le redistribuer et/ou le modifier selon les
-termes de la Licence Publique Générale GNU publiée par la Free Software
-Foundation (version 2 ou bien toute autre version ultérieure choisie par vous).
+termes de la Licence Publique Gï¿½nï¿½rale GNU publiï¿½e par la Free Software
+Foundation (version 2 ou bien toute autre version ultï¿½rieure choisie par vous).
 
-Ce programme est distribué car potentiellement utile, mais SANS AUCUNE
+Ce programme est distribuï¿½ car potentiellement utile, mais SANS AUCUNE
 GARANTIE, ni explicite ni implicite, y compris les garanties de
-commercialisation ou d'adaptation dans un but spécifique. Reportez-vous à la
-Licence Publique Générale GNU pour plus de détails.
+commercialisation ou d'adaptation dans un but spï¿½cifique. Reportez-vous ï¿½ la
+Licence Publique Gï¿½nï¿½rale GNU pour plus de dï¿½tails.
 
-Vous devez avoir reçu une copie de la Licence Publique Générale GNU en même
-temps que ce programme ; si ce n'est pas le cas, écrivez à la Free Software
+Vous devez avoir reï¿½u une copie de la Licence Publique Gï¿½nï¿½rale GNU en mï¿½me
+temps que ce programme ; si ce n'est pas le cas, ï¿½crivez ï¿½ la Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
-États-Unis.
+ï¿½tats-Unis.
 
 Contact: Guillaume.Huard@imag.fr
-	 Bâtiment IMAG
+	 Bï¿½timent IMAG
 	 700 avenue centrale, domaine universitaire
-	 38401 Saint Martin d'Hères
+	 38401 Saint Martin d'Hï¿½res
 */
 #include "arm_exception.h"
 #include "arm_constants.h"
@@ -33,8 +33,58 @@ Contact: Guillaume.Huard@imag.fr
 void arm_exception(arm_core p, unsigned char exception) {
     /* We only support RESET initially */
     /* Semantics of reset interrupt (ARM manual A2-18) */
-    if (exception == RESET) {
-        arm_write_cpsr(p, 0x1d3 | Exception_bit_9);
-	arm_write_usr_register(p, 15, 0);
+    uint32_t cpsr_value = arm_read_cpsr(p);
+    uint32_t spsr = cpsr_value;
+    uint8_t pc_offset = 0;
+    uint8_t pc_value = 0;
+    clr_bit(cpsr_value, 5);
+    set_bit(cpsr_value, 7);
+    clr_bit(cpsr_value, 9);
+    switch (exception)
+    {
+        case RESET:
+            set_bits(cpsr_value, 4 , 0, SVC);
+            set_bit(cpsr_value, 6);
+            set_bit(cpsr_value, 8);
+            break;
+        case UNDEFINED_INSTRUCTION:
+            set_bits(cpsr_value, 4 , 0, UND);
+            pc_value = 4;
+            break;
+        case SOFTWARE_INTERRUPT:
+            set_bits(cpsr_value, 4 , 0, SVC);
+            pc_value = 8;
+            break;
+        case PREFETCH_ABORT:
+            set_bits(cpsr_value, 4 , 0, ABT);
+            set_bit(cpsr_value, 8);
+            pc_offset = 4;
+            pc_value = 12;
+            break;
+        case DATA_ABORT:
+            set_bits(cpsr_value, 4 , 0, ABT);
+            set_bit(cpsr_value, 8);
+            pc_offset = 8;
+            pc_value = 16;
+            break;
+        case INTERRUPT:
+            set_bits(cpsr_value, 4 , 0, IRQ);
+            set_bit(cpsr_value, 8);
+            pc_offset = 4;
+            pc_value = 24;
+            break;
+        case FAST_INTERRUPT:
+            set_bits(cpsr_value, 4 , 0, FIQ);
+            set_bit(cpsr_value, 6);
+            set_bit(cpsr_value, 8);
+            pc_offset = 4;
+            pc_value = 28;
+            break;
     }
+    if(exception != RESET){
+        arm_write_cpsr(p, cpsr_value);
+        arm_write_spsr(p, spsr);
+        arm_write_register(p, 14, arm_read_register(p, 15)+pc_offset);
+    }
+    arm_write_usr_register(p, 15, pc_value);
 }
