@@ -84,13 +84,6 @@ registers registers_create() {
     r->data=calloc(sizeof(uint32_t), 38);
     if(r->data == NULL) return NULL;
 
-    // CPSR
-    uint32_t cpsr = read_cpsr(r);
-    cpsr = set_bits(cpsr, 4, 0, SYS);
-    cpsr = clr_bit(cpsr, 7);
-    cpsr = clr_bit(cpsr, 6);
-    write_cpsr(r, cpsr);
-
     return r;
 }
 

@@ -81,8 +81,8 @@ void arm_exception(arm_core p, unsigned char exception) {
             pc_value = 28;
             break;
     }
+    arm_write_cpsr(p, cpsr_value);
     if(exception != RESET){
-        arm_write_cpsr(p, cpsr_value);
         arm_write_spsr(p, spsr);
         arm_write_register(p, 14, arm_read_register(p, 15)+pc_offset);
     }
