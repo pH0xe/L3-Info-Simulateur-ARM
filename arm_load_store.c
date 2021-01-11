@@ -295,7 +295,7 @@ int arm_load_store(arm_core p, uint32_t ins) {
                 arm_read_half(p, address, &value);
                 uint32_t value_32 = value;
                 if (is_S) {
-                    if (get_bit(value,15)) value_32 = set_bits(value_32, 31, 16, 0xFFFF);
+                    if (get_bit(value,15)) value_32 = set_bits(value_32, 30, 16, 0xFFFF);
                 }
                 arm_write_register(p, reg_dest, value_32);
             }
@@ -307,7 +307,7 @@ int arm_load_store(arm_core p, uint32_t ins) {
                 arm_read_byte(p, address, &value);
                 uint32_t value_32 = value;
                 if (is_S) {
-                    if (get_bit(value, 7)) value_32 = set_bits(value_32, 31, 8, 0xFFFFFF);
+                    if (get_bit(value, 7)) value_32 = set_bits(value_32, 30, 8, 0xFFFFFF);
                 }
                 arm_write_register(p, reg_dest, value_32);
             }
