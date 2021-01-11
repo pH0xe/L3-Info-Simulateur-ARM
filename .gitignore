@@ -69,6 +69,7 @@ Examples/example2
 Examples/example3
 Examples/example4
 Examples/insertion_sort
+Examples/test1
 arm_simulator
 memory_test
 send_irq

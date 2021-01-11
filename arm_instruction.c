@@ -36,7 +36,7 @@ int condition(arm_core p, uint32_t ins) {
             if(get_bit(cpsr_value,Z)) return 1;
             break;
         case 1:     //NE
-            if(!get_bit(cpsr_value,Z))return 1;
+            if(!get_bit(cpsr_value,Z)) return 1;
             break;
         case 2:     //CS/HS
             if(get_bit(cpsr_value,C)) return 1;
@@ -78,10 +78,10 @@ int condition(arm_core p, uint32_t ins) {
             return 1;
             break;
         default:    //ERROR
-            return UNDEFINED_INSTRUCTION;
+            return 0;
             break;
     }
-    return UNDEFINED_INSTRUCTION;
+    return 0;
 }
 
 static int arm_execute_instruction(arm_core p) {
