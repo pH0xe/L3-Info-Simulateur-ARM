@@ -283,25 +283,33 @@ int arm_load_store(arm_core p, uint32_t ins) {
     int is_load = get_bit(ins, 20) == 1;
     int is_H = get_bits(ins, 27, 25) == 0 && get_bits(ins, 7, 4) == 0xB;
     int is_B = get_bit(ins, 22) == 1;
-
+    int is_S = get_bits(ins, 27, 25) == 0 && get_bits(ins, 7, 4) >= 0xE;
     uint32_t reg_dest = get_bits(ins, 15, 12);
 
     if (is_load) {
         if (is_H){
-            // LDRH
+            // LDRH/LDRSH
             uint32_t address = getAddressModeHalf(p, ins);
             if (address != -1 ){
                 uint16_t value;
                 arm_read_half(p, address, &value);
-                arm_write_register(p, reg_dest, value);
+                uint32_t value_32 = value;
+                if (is_S) {
+                    if (get_bit(value,15)) value_32 = set_bits(value_32, 30, 16, 0xFFFF);
+                }
+                arm_write_register(p, reg_dest, value_32);
             }
         } else if (is_B) {
-            // LDRB
+            // LDRB/LDRSB
             uint32_t address = getAddressModeBW(p, ins);
             if (address != -1) {
                 uint8_t value;
                 arm_read_byte(p, address, &value);
-                arm_write_register(p, reg_dest, value);
+                uint32_t value_32 = value;
+                if (is_S) {
+                    if (get_bit(value, 7)) value_32 = set_bits(value_32, 30, 8, 0xFFFFFF);
+                }
+                arm_write_register(p, reg_dest, value_32);
             }
         } else {
             // LDR
