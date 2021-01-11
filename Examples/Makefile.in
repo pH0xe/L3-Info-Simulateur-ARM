@@ -90,7 +90,7 @@ POST_UNINSTALL = :
 @HAVE_ARM_COMPILER_TRUE@	example2$(EXEEXT) example3$(EXEEXT) \
 @HAVE_ARM_COMPILER_TRUE@	example4$(EXEEXT) \
 @HAVE_ARM_COMPILER_TRUE@	insertion_sort$(EXEEXT) test1$(EXEEXT) \
-@HAVE_ARM_COMPILER_TRUE@	test2$(EXEEXT)
+@HAVE_ARM_COMPILER_TRUE@	test2$(EXEEXT) test3$(EXEEXT)
 subdir = Examples
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -123,6 +123,9 @@ test1_LDADD = $(LDADD)
 am_test2_OBJECTS = test2.$(OBJEXT)
 test2_OBJECTS = $(am_test2_OBJECTS)
 test2_LDADD = $(LDADD)
+am_test3_OBJECTS = test3.$(OBJEXT)
+test3_OBJECTS = $(am_test3_OBJECTS)
+test3_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -159,10 +162,11 @@ am__v_CCAS_0 = @echo "  CCAS    " $@;
 am__v_CCAS_1 = 
 SOURCES = $(example1_SOURCES) $(example2_SOURCES) $(example3_SOURCES) \
 	$(example4_SOURCES) $(insertion_sort_SOURCES) $(test1_SOURCES) \
-	$(test2_SOURCES)
+	$(test2_SOURCES) $(test3_SOURCES)
 DIST_SOURCES = $(example1_SOURCES) $(example2_SOURCES) \
 	$(example3_SOURCES) $(example4_SOURCES) \
-	$(insertion_sort_SOURCES) $(test1_SOURCES) $(test2_SOURCES)
+	$(insertion_sort_SOURCES) $(test1_SOURCES) $(test2_SOURCES) \
+	$(test3_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -296,6 +300,7 @@ example4_SOURCES = example4.s
 insertion_sort_SOURCES = insertion_sort.c
 test1_SOURCES = test1.s
 test2_SOURCES = test2.s
+test3_SOURCES = test3.s
 EXTRA_DIST = linker_script
 all: all-am
 
@@ -361,6 +366,10 @@ test1$(EXEEXT): $(test1_OBJECTS) $(test1_DEPENDENCIES) $(EXTRA_test1_DEPENDENCIE
 test2$(EXEEXT): $(test2_OBJECTS) $(test2_DEPENDENCIES) $(EXTRA_test2_DEPENDENCIES) 
 	@rm -f test2$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test2_OBJECTS) $(test2_LDADD) $(LIBS)
+
+test3$(EXEEXT): $(test3_OBJECTS) $(test3_DEPENDENCIES) $(EXTRA_test3_DEPENDENCIES) 
+	@rm -f test3$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test3_OBJECTS) $(test3_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
