@@ -41,6 +41,7 @@ int main() {
         printf("Erreur d'allocation mémoire à la création des registres\n");
         return -1;
     }
+    write_cpsr(r, 0x1d3);
     afficher_mode(r);
     printf("Mode courant possède un registre SPSR: ");
     if(current_mode_has_spsr(r)) printf("Oui\n");
@@ -60,19 +61,22 @@ int main() {
         write_register(r,i,val);
         val += 0x11;
     }
-    printf("On écrit la valeur 0x12345678 dans CPSR\n");
-    // write_cpsr(r,0x12345678);
+    printf("On passe le mode en USR\n");
+    write_cpsr(r,0x1d0);
+    afficher_mode(r);
+    printf("Mode courant possède un registre SPSR: ");
+    if(current_mode_has_spsr(r)) printf("Oui\n");
+    else printf("Non\n");
+
+    printf("Mode courant privilégié: ");
+    if(in_a_privileged_mode(r)) printf("Oui\n");
+    else printf("Non\n");
     for (int i=0;i<18;i++){
         printf("Le registre %s contient la valeur %x\n",arm_get_register_name(i), read_register(r,i));
     }
     
     registers_destroy(r);
 }
-/*
-//changement mode
-
-in_a_privileged_mode
-*/
 
 
 
